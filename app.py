@@ -48,8 +48,6 @@ def chat():
             thinking_seq.append(thinking)
             responsing_seq.append(responsing)
 
-            print(content_seq)
-            
             return jsonify({'thinking': thinking, 'responsing': responsing})
         
         except KeyError:

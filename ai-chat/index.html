@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .chat-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+        .input-box {
+            margin-top: 10px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Chat</h1>
+        <div>
+            <label for="api-key">API Key:</label>
+            <input type="text" id="api-key" placeholder="Enter your API Key">
+        </div>
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-box">
+            <input type="text" id="user-input" placeholder="Type your message here">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <div class="loading" id="loading">Loading...</div>
+    </div>
+
+    <script>
+        const BASE_URL = "https://api.siliconflow.cn/v1/chat/completions";
+        const MODEL = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B";
+        let contentSeq = [];
+
+        function sendMessage() {
+            const apiKey = document.getElementById('api-key').value;
+            const userInput = document.getElementById('user-input').value;
+            if (!apiKey || !userInput) {
+                alert('Please enter both API Key and message.');
+                return;
+            }
+
+            contentSeq.push({"role": "user", "content": userInput});
+            document.getElementById('user-input').value = '';
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>User:</strong> ${marked.parse(userInput)}</p>`;
+
+            // 显示加载动画
+            document.getElementById('loading').style.display = 'block';
+
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            };
+
+            const payload = {
+                "model": MODEL,
+                "messages": contentSeq,
+                "max_tokens": 8192,
+                "temperature": 0.6,
+                "top_p": 0.7,
+                "top_k": 50,
+                "frequency_penalty": 0.5
+            };
+
+            fetch(BASE_URL, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.error) {
+                    alert(data.error);
+                    console.error('Error:', data.response);
+                    return;
+                }
+
+                const thinking = data.choices[0].message.reasoning_content || "No reasoning";
+                const responsing = data.choices[0].message.content;
+
+                chatBox.innerHTML += `<p><strong>AI Thinking:</strong> ${marked.parse(thinking)}</p>`;
+                chatBox.innerHTML += `<p><strong>AI Response:</strong> ${marked.parse(responsing)}</p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                contentSeq.push({"role": "assistant", "content": responsing});
+            })
+            .catch(error => {
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
