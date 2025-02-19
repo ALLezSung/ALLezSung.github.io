@@ -13,9 +13,13 @@ def index():
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    content_seq = []
+    thinking_seq = []
+    responsing_seq = []
+
     api_key = request.json.get('api_key')
     content_seq = request.json.get('content_seq')
-    
+
     headers = {
         "content-type": "application/json",
         "authorization": f"Bearer {api_key}"
@@ -28,32 +32,32 @@ def chat():
         "temperature": 0.6,
         "top_p": 0.7,
         "top_k": 50,
-        "frequency_penalty": 0.5,
-        "stream": True
+        "frequency_penalty": 0.5
     }
     
-    response = requests.post(BASE_URL, json=payload, headers=headers, stream=True)
-    thinking_seq = []
-    responing_seq = []
+    response = requests.post(BASE_URL, json=payload, headers=headers)
+
     if response.status_code == 200:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                decoded_chunk = chunk.decode('utf-8')
-                decoded_chunk = decoded_chunk.strip('data:')
-                try:
-                    json_chunk = json.loads(decoded_chunk)
-                except:
-                    break
-                thinking = json_chunk['choices'][0]['delta']['reasoning_content']
-                responing = json_chunk['choices'][0]['delta']['content']
-                if thinking:
-                    thinking_seq.append(thinking)
-                if responing:
-                    responing_seq.append(responing)
+        response_json = response.json()
+
+        try:
+            thinking = response_json['choices'][0]['message'].get('reasoning_content', "No reasoning")
+            responsing = response_json['choices'][0]['message']['content']
+
+            content_seq.append({"role": "assistant", "content": responsing})
+            thinking_seq.append(thinking)
+            responsing_seq.append(responsing)
+
+            print(content_seq)
+            
+            return jsonify({'thinking': thinking, 'responsing': responsing})
+        
+        except KeyError:
+            return jsonify({'error': 'Error processing response', 'response': response_json}), 400
+
     else:
         return jsonify({'error': 'Request failed with status code: ' + str(response.status_code)})
 
-    return jsonify({'thinking': thinking_seq, 'responing': responing_seq})
 
 if __name__ == '__main__':
     app.run(debug=True)

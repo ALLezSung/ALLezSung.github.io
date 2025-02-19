@@ -22,7 +22,13 @@
         .input-box {
             margin-top: 10px;
         }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -36,6 +42,7 @@
             <input type="text" id="user-input" placeholder="Type your message here">
             <button onclick="sendMessage()">Send</button>
         </div>
+        <div class="loading" id="loading">Loading...</div>
     </div>
 
     <script>
@@ -51,6 +58,11 @@
 
             contentSeq.push({"role": "user", "content": userInput});
             document.getElementById('user-input').value = '';
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p><strong>User:</strong> ${marked.parse(userInput)}</p>`;
+
+            // 显示加载动画
+            document.getElementById('loading').style.display = 'block';
 
             fetch('/chat', {
                 method: 'POST',
@@ -64,22 +76,24 @@
             })
             .then(response => response.json())
             .then(data => {
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
+
                 if (data.error) {
                     alert(data.error);
+                    console.error('Error:', data.response);
                     return;
                 }
 
-                const chatBox = document.getElementById('chat-box');
-                chatBox.innerHTML += `<p><strong>User:</strong> ${userInput}</p>`;
-                chatBox.innerHTML += `<strong>AI:</strong> `;
-                data.responing.forEach(message => {
-                    chatBox.innerHTML += `${message}`;
-                });
+                chatBox.innerHTML += `<p><strong>AI Thinking:</strong> ${marked.parse(data.thinking)}</p>`;
+                chatBox.innerHTML += `<p><strong>AI Response:</strong> ${marked.parse(data.responsing)}</p>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
 
-                contentSeq.push({"role": "assistant", "content": data.responing.join(' ')});
+                contentSeq.push({"role": "assistant", "content": data.responsing});
             })
             .catch(error => {
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
                 console.error('Error:', error);
             });
         }
